@@ -1,0 +1,165 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<dom-module id="cropper-el">
+  <template>
+    <style>
+      #circle {
+        border-style: solid;
+        border-color: white;
+        border-width: 5px;
+        border-radius: 50%;
+        height: 200px;
+        width: 200px;
+        position: absolute;
+        left: calc(500px/2 - 200px/2);
+        top: calc(500px/2 - 200px/2);
+        box-shadow: 0px 0px 0px 500px rgba(255, 255, 255, 0.49);
+      }
+      #canvas-wrapper {
+        position: absolute;
+        top: 0;
+        width: 500px;
+        height: 500px;
+      }
+      #real-wrapper {
+        position: relative;
+        overflow: hidden;
+      }
+    </style>
+
+    <div>
+      <div id="real-wrapper">
+        <div id="circle"></div>
+        <canvas width="500" height="500"></canvas>
+          <div
+            id="canvas-wrapper"
+            on-mousedown="handleWrapperMouseDown"
+            on-mouseup="handleWrapperMouseUp"
+            on-mousemove="handleWrapperMouseMove"
+            on-mouseout="handleWrapperMouseOut">
+            </div>
+
+      </div>
+      <input id="zoom-slider" type="range" min="0.1" max="4" value="1" step=".0005" on-input="handleZoomSliderInput">
+    </div>
+    <a href="https://commons.wikimedia.org/wiki/File:Guinea_Pig_eating_apple.JPG">Guinea Pig image from Wikipedia</a>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'cropper-el',
+
+      properties: {
+        prop1: {
+          type: String,
+          value: 'cropper-el'
+        },
+        offset: {
+          type: Object,
+          value: {x:0, y:0}
+        },
+        lastDrawnPt: {
+          type: Object,
+          value: {x:0, y:0}
+        },
+        anchorCanvasPt: {
+          type: Object,
+          value: {x:0, y:0}
+        },
+        scale: {
+          type: Number,
+          value: 1
+        },
+        isDragging: {
+          type: Boolean,
+          value: false
+        },
+        ctx: {
+          type: Object,
+          value: {}
+        },
+        canvas: {
+          type: Object,
+          value: {}
+        },
+        img: {
+          type: Object,
+          value: {}
+        }
+      },
+
+      ready: function(){
+        this.init();
+      },
+
+      clearImage: function(){
+        this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      },
+
+      changeScale: function(newScale){
+        this.scale = newScale;
+        this.clearImage();
+        this.ctx.drawImage(this.img, this.lastDrawnPt.x, this.lastDrawnPt.y, this.img.width*this.scale, this.img.height*this.scale);
+      },
+
+      handleZoomSliderInput: function() {
+        var zoomSlider = Polymer.dom(this.root).querySelector('#zoom-slider');
+        this.changeScale(zoomSlider.value);
+      },
+
+      handleWrapperMouseDown: function(e) {
+        this.isDragging = true;
+        this.anchorCanvasPt.x = e.clientX;
+        this.anchorCanvasPt.y = e.clientY;
+      },
+
+      handleWrapperMouseMove: function(e) {
+        if(this.isDragging){
+
+          this.clearImage();
+          var newCanvasPt = {
+            x: e.clientX,
+            y: e.clientY
+          };
+          var drawImagePt = this.getDrawImagePt(this.anchorCanvasPt, newCanvasPt);
+          this.ctx.drawImage(this.img, drawImagePt.x, drawImagePt.y, this.img.width*this.scale, this.img.height*this.scale);
+          this.lastDrawnPt = drawImagePt;
+        }
+      },
+
+      handleWrapperMouseUp: function(e){
+        this.isDragging = false;
+        this.offset.x = this.lastDrawnPt.x * -1;
+        this.offset.y = this.lastDrawnPt.y * -1;
+      },
+
+      handleWrapperMouseOut: function(e){
+        this.isDragging = false;
+        this.offset.x = this.lastDrawnPt.x * -1;
+        this.offset.y = this.lastDrawnPt.y * -1;
+      },
+
+      getDrawImagePt: function(anchorCanvasPt, newCanvasPt){
+        return {
+          x: newCanvasPt.x - anchorCanvasPt.x - this.offset.x,
+          y: newCanvasPt.y - anchorCanvasPt.y - this.offset.y
+        }
+      },
+
+      init: function(){
+        this.canvas = Polymer.dom(this.root).querySelector('canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.clearImage();
+
+        //Load image
+        this.img = new Image();
+        this.img.addEventListener('load', function(){
+          this.ctx.drawImage(this.img, 0, 0);
+        }.bind(this));
+        this.img.src = 'https://upload.wikimedia.org/wikipedia/commons/8/88/Guinea_Pig_eating_apple.JPG';
+
+      }
+    });
+  </script>
+</dom-module>
